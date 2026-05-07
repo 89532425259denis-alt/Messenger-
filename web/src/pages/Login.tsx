@@ -1,7 +1,6 @@
-import { FormEvent, useEffect, useState } from "react"
+import { useEffect, useState } from "react"
 import { GoogleLogin, GoogleOAuthProvider } from "@react-oauth/google"
-import { Link, useNavigate } from "react-router-dom"
-import { Eye, EyeOff } from "lucide-react"
+import { useNavigate } from "react-router-dom"
 import { Logo } from "@/components/Logo"
 import { ThemeToggle } from "@/components/ThemeToggle"
 import { api, ApiError, setToken } from "@/lib/api"
@@ -21,9 +20,6 @@ declare global {
 
 export function LoginPage() {
   const [config, setConfig] = useState<Config | null>(null)
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
-  const [showPassword, setShowPassword] = useState(false)
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
@@ -57,27 +53,6 @@ export function LoginPage() {
     }
   }, [])
 
-  async function handleEmailLogin(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault()
-    if (loading) return
-    setLoading(true)
-    setError(null)
-    try {
-      const { token } = await api.loginWithEmail(
-        email.trim(),
-        password,
-        turnstileToken ?? undefined,
-      )
-      setToken(token)
-      navigate("/", { replace: true })
-    } catch (e) {
-      const msg = e instanceof ApiError ? e.message : (e as Error).message
-      setError(msg ?? "Ошибка входа")
-    } finally {
-      setLoading(false)
-    }
-  }
-
   async function handleGoogle(credential?: string) {
     if (!credential) return
     setLoading(true)
@@ -101,91 +76,30 @@ export function LoginPage() {
       <div className="absolute right-5 top-5">
         <ThemeToggle />
       </div>
-      <div className="flex w-full max-w-sm flex-col items-center gap-8 animate-fade-in">
+      <div className="flex w-full max-w-sm flex-col items-center gap-10 animate-fade-in">
         <Logo size="xl" />
 
-        <div className="flex flex-col items-center gap-2 text-center">
-          <h1 className="text-3xl font-bold tracking-tight">Вход в аккаунт</h1>
-          <p className="text-muted-fg text-sm">Введите данные для входа</p>
-        </div>
-
-        <form onSubmit={handleEmailLogin} className="flex w-full flex-col gap-3">
-          <input
-            type="email"
-            inputMode="email"
-            autoComplete="email"
-            required
-            placeholder="Электронная почта"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="h-14 w-full rounded-2xl border border-border bg-transparent px-5 text-base text-fg placeholder:text-muted-fg focus:outline-none focus:ring-2 focus:ring-ring/30"
-          />
-
-          <div className="relative">
-            <input
-              type={showPassword ? "text" : "password"}
-              autoComplete="current-password"
-              required
-              placeholder="Пароль"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="h-14 w-full rounded-2xl border border-border bg-transparent px-5 pr-12 text-base text-fg placeholder:text-muted-fg focus:outline-none focus:ring-2 focus:ring-ring/30"
+        {config?.turnstile_site_key && (
+          <div className="flex w-full justify-center">
+            <div
+              className="cf-turnstile"
+              data-sitekey={config.turnstile_site_key}
+              data-callback="onTurnstileSuccess"
+              data-expired-callback="onTurnstileExpired"
+              data-theme="auto"
+              data-size="flexible"
             />
-            <button
-              type="button"
-              onClick={() => setShowPassword((v) => !v)}
-              aria-label={showPassword ? "Скрыть пароль" : "Показать пароль"}
-              className="absolute right-3 top-1/2 -translate-y-1/2 grid size-9 place-items-center rounded-full text-muted-fg hover:text-fg"
-            >
-              {showPassword ? <EyeOff className="size-5" /> : <Eye className="size-5" />}
-            </button>
           </div>
+        )}
 
-          <div className="flex justify-end">
-            <button
-              type="button"
-              onClick={() => setError("Восстановление пароля скоро будет доступно")}
-              className="text-sm text-blue-500 hover:underline"
-            >
-              Забыли пароль?
-            </button>
+        {error && (
+          <div className="w-full rounded-2xl bg-danger/10 px-4 py-3 text-sm text-danger" role="alert">
+            {error}
           </div>
+        )}
 
-          {config?.turnstile_site_key && (
-            <div className="flex justify-center pt-1">
-              <div
-                className="cf-turnstile"
-                data-sitekey={config.turnstile_site_key}
-                data-callback="onTurnstileSuccess"
-                data-expired-callback="onTurnstileExpired"
-                data-theme="auto"
-                data-size="flexible"
-              />
-            </div>
-          )}
-
-          {error && (
-            <div className="rounded-2xl bg-danger/10 px-4 py-3 text-sm text-danger" role="alert">
-              {error}
-            </div>
-          )}
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="mt-1 h-14 w-full rounded-2xl bg-blue-600 text-base font-semibold text-white shadow-sm transition hover:bg-blue-500 disabled:opacity-60"
-          >
-            {loading ? "Входим…" : "Войти"}
-          </button>
-        </form>
-
-        {clientId && (
-          <div className="flex w-full flex-col items-center gap-3">
-            <div className="flex w-full items-center gap-3 text-xs uppercase tracking-wider text-muted-fg">
-              <span className="h-px flex-1 bg-border" />
-              <span>или</span>
-              <span className="h-px flex-1 bg-border" />
-            </div>
+        {clientId ? (
+          <div className="flex w-full justify-center" aria-busy={loading}>
             <GoogleOAuthProvider clientId={clientId}>
               <GoogleLogin
                 onSuccess={(resp) => handleGoogle(resp.credential)}
@@ -198,14 +112,9 @@ export function LoginPage() {
               />
             </GoogleOAuthProvider>
           </div>
+        ) : (
+          <p className="text-sm text-muted-fg">Загружаем конфигурацию…</p>
         )}
-
-        <p className="text-sm text-muted-fg">
-          Нет аккаунта?{" "}
-          <Link to="/register" className="font-semibold text-blue-500 hover:underline">
-            Зарегистрироваться
-          </Link>
-        </p>
       </div>
     </main>
   )
