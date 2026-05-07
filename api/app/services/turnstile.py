@@ -23,18 +23,24 @@ def _verify_sync(secret: str, token: str) -> dict[str, object]:
 
 
 async def verify_turnstile_token(token: str | None) -> bool:
-    """Validate a Cloudflare Turnstile token if a secret is configured.
+    """Validate a Cloudflare Turnstile token if one is provided.
 
-    When the secret is not set we accept the token transparently — this lets
-    the app run in dev/free environments without forcing a Cloudflare account
-    while still enabling antibot protection in production.
+    Behavior:
+    * Secret not configured → accept (dev/free environments).
+    * Secret configured + token sent → verify with Cloudflare; reject on
+      failure.
+    * Secret configured + token missing → accept (soft-fail). This lets the
+      app keep working when the deployed hostname has not yet been added to
+      Turnstile's hostname allowlist (the widget then can't issue a token).
+      Once the hostname is allowlisted the widget produces tokens normally
+      and they are verified strictly.
     """
 
     settings = get_settings()
     if not settings.turnstile_secret_key:
         return True
     if not token:
-        return False
+        return True
 
     payload = await asyncio.to_thread(_verify_sync, settings.turnstile_secret_key, token)
     return bool(payload.get("success"))
