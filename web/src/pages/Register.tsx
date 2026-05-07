@@ -12,17 +12,12 @@ type Config = {
   app_name: string
 }
 
-declare global {
-  interface Window {
-    onTurnstileSuccess?: (token: string) => void
-    onTurnstileExpired?: () => void
-  }
-}
-
-export function LoginPage() {
+export function RegisterPage() {
   const [config, setConfig] = useState<Config | null>(null)
+  const [name, setName] = useState("")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
+  const [confirm, setConfirm] = useState("")
   const [showPassword, setShowPassword] = useState(false)
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -57,22 +52,31 @@ export function LoginPage() {
     }
   }, [])
 
-  async function handleEmailLogin(e: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()
     if (loading) return
+    if (password.length < 8) {
+      setError("Пароль должен быть не короче 8 символов")
+      return
+    }
+    if (password !== confirm) {
+      setError("Пароли не совпадают")
+      return
+    }
     setLoading(true)
     setError(null)
     try {
-      const { token } = await api.loginWithEmail(
+      const { token } = await api.registerWithEmail(
         email.trim(),
         password,
+        name.trim() || null,
         turnstileToken ?? undefined,
       )
       setToken(token)
       navigate("/", { replace: true })
     } catch (e) {
       const msg = e instanceof ApiError ? e.message : (e as Error).message
-      setError(msg ?? "Ошибка входа")
+      setError(msg ?? "Не удалось создать аккаунт")
     } finally {
       setLoading(false)
     }
@@ -105,11 +109,20 @@ export function LoginPage() {
         <Logo size="xl" />
 
         <div className="flex flex-col items-center gap-2 text-center">
-          <h1 className="text-3xl font-bold tracking-tight">Вход в аккаунт</h1>
-          <p className="text-muted-fg text-sm">Введите данные для входа</p>
+          <h1 className="text-3xl font-bold tracking-tight">Регистрация</h1>
+          <p className="text-muted-fg text-sm">Создайте аккаунт за минуту</p>
         </div>
 
-        <form onSubmit={handleEmailLogin} className="flex w-full flex-col gap-3">
+        <form onSubmit={handleSubmit} className="flex w-full flex-col gap-3">
+          <input
+            type="text"
+            autoComplete="name"
+            placeholder="Имя (необязательно)"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            className="h-14 w-full rounded-2xl border border-border bg-transparent px-5 text-base text-fg placeholder:text-muted-fg focus:outline-none focus:ring-2 focus:ring-ring/30"
+          />
+
           <input
             type="email"
             inputMode="email"
@@ -124,9 +137,10 @@ export function LoginPage() {
           <div className="relative">
             <input
               type={showPassword ? "text" : "password"}
-              autoComplete="current-password"
+              autoComplete="new-password"
               required
-              placeholder="Пароль"
+              minLength={8}
+              placeholder="Пароль (минимум 8 символов)"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="h-14 w-full rounded-2xl border border-border bg-transparent px-5 pr-12 text-base text-fg placeholder:text-muted-fg focus:outline-none focus:ring-2 focus:ring-ring/30"
@@ -141,15 +155,16 @@ export function LoginPage() {
             </button>
           </div>
 
-          <div className="flex justify-end">
-            <button
-              type="button"
-              onClick={() => setError("Восстановление пароля скоро будет доступно")}
-              className="text-sm text-blue-500 hover:underline"
-            >
-              Забыли пароль?
-            </button>
-          </div>
+          <input
+            type={showPassword ? "text" : "password"}
+            autoComplete="new-password"
+            required
+            minLength={8}
+            placeholder="Повторите пароль"
+            value={confirm}
+            onChange={(e) => setConfirm(e.target.value)}
+            className="h-14 w-full rounded-2xl border border-border bg-transparent px-5 text-base text-fg placeholder:text-muted-fg focus:outline-none focus:ring-2 focus:ring-ring/30"
+          />
 
           {config?.turnstile_site_key && (
             <div className="flex justify-center pt-1">
@@ -175,7 +190,7 @@ export function LoginPage() {
             disabled={loading}
             className="mt-1 h-14 w-full rounded-2xl bg-blue-600 text-base font-semibold text-white shadow-sm transition hover:bg-blue-500 disabled:opacity-60"
           >
-            {loading ? "Входим…" : "Войти"}
+            {loading ? "Создаём…" : "Зарегистрироваться"}
           </button>
         </form>
 
@@ -193,7 +208,7 @@ export function LoginPage() {
                 useOneTap={false}
                 shape="pill"
                 size="large"
-                text="continue_with"
+                text="signup_with"
                 theme="outline"
               />
             </GoogleOAuthProvider>
@@ -201,9 +216,9 @@ export function LoginPage() {
         )}
 
         <p className="text-sm text-muted-fg">
-          Нет аккаунта?{" "}
-          <Link to="/register" className="font-semibold text-blue-500 hover:underline">
-            Зарегистрироваться
+          Уже есть аккаунт?{" "}
+          <Link to="/login" className="font-semibold text-blue-500 hover:underline">
+            Войти
           </Link>
         </p>
       </div>

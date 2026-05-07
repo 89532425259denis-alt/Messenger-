@@ -64,6 +64,21 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ id_token: idToken, turnstile_token: turnstileToken }),
     }),
+  loginWithEmail: (email: string, password: string, turnstileToken?: string) =>
+    request<{ token: string; user: Me }>("/auth/login", {
+      method: "POST",
+      body: JSON.stringify({ email, password, turnstile_token: turnstileToken }),
+    }),
+  registerWithEmail: (
+    email: string,
+    password: string,
+    name: string | null,
+    turnstileToken?: string,
+  ) =>
+    request<{ token: string; user: Me }>("/auth/register", {
+      method: "POST",
+      body: JSON.stringify({ email, password, name, turnstile_token: turnstileToken }),
+    }),
   me: () => request<Me>("/me"),
   listChats: () => request<Chat[]>("/chats"),
   config: () =>

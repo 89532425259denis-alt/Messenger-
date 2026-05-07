@@ -35,8 +35,11 @@ class User(Base):
     __tablename__ = "users"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
-    google_sub: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    google_sub: Mapped[str | None] = mapped_column(
+        String(64), unique=True, index=True, nullable=True
+    )
     email: Mapped[str] = mapped_column(String(320), unique=True, index=True)
+    password_hash: Mapped[str | None] = mapped_column(String(255), nullable=True)
     name: Mapped[str] = mapped_column(String(120))
     picture: Mapped[str | None] = mapped_column(String(512), nullable=True)
     username: Mapped[str | None] = mapped_column(String(40), unique=True, nullable=True)
