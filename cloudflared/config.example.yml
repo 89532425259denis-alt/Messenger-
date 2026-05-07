@@ -1,0 +1,28 @@
+# Example Cloudflare Tunnel (cloudflared) configuration for DEVO+.
+#
+# Setup:
+#   1. Install cloudflared: https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/
+#   2. Create a free Cloudflare account and add your domain (or use a *.trycloudflare.com URL).
+#   3. Run `cloudflared tunnel login` then `cloudflared tunnel create devo-plus`.
+#   4. Copy the resulting tunnel UUID into `tunnel:` below and put credentials-file path.
+#   5. Point DNS at the tunnel:  cloudflared tunnel route dns devo-plus chat.example.com
+#   6. Start with:   cloudflared tunnel --config cloudflared/config.yml run
+#
+# Quick (no domain) alternative — exposes a temporary trycloudflare.com URL:
+#     cloudflared tunnel --url http://localhost:8000
+#     cloudflared tunnel --url http://localhost:5173
+
+tunnel: <YOUR-TUNNEL-UUID>
+credentials-file: /home/ubuntu/.cloudflared/<YOUR-TUNNEL-UUID>.json
+
+ingress:
+  # API (FastAPI + WebSocket)
+  - hostname: api.example.com
+    service: http://localhost:8000
+
+  # Web (Vite dev server in development, or static build in production)
+  - hostname: chat.example.com
+    service: http://localhost:5173
+
+  # Catch-all
+  - service: http_status:404
